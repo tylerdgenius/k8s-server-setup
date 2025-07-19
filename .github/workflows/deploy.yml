@@ -1,0 +1,28 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up KUBECONFIG
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+
+      - name: Deploy Kubernetes resources
+        run: |
+          DOMAIN="${{ secrets.DOMAIN }}"
+          EMAIL="${{ secrets.EMAIL }}"
+
+          sed "s/DOMAIN_PLACEHOLDER/$DOMAIN/g; s/EMAIL_PLACEHOLDER/$EMAIL/g" manifests/issuer.yaml | kubectl apply -f -
+          kubectl apply -f manifests/service.yaml
+          kubectl apply -f manifests/deployment.yaml
+          sed "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" manifests/ingress.yaml | kubectl apply -f -
